@@ -4,7 +4,7 @@ from os import path
 
 
 
-def xlsx_to_csv(filename: str):
+def xlsx_to_csv(filename: str) -> None:
     """ Given a filename, converts the excel file to a proper comma seperated file.
 
     Args:
@@ -12,12 +12,13 @@ def xlsx_to_csv(filename: str):
     """
     
     # Basic error handling
-    if ".xlsx" not in file_name:
+    if ".xlsx" not in filename:
         print("Assuming xlsx extension")
-        file_name = file_name + ".xlsx"
-    if not path.isfile(file_name):
+        filename = filename + ".xlsx"
+    if not path.isfile(filename):
         print("Invalid file")
-        
+        quit()
+    
     data_frame = pd.DataFrame(pd.read_excel(filename))
     print(data_frame.head)
 
@@ -26,4 +27,7 @@ def xlsx_to_csv(filename: str):
 
 
 if __name__ == "__main__":
+    
+    xlsx_file = input("Name of the excel file:  ")
+    xlsx_to_csv(xlsx_file)
     
