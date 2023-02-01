@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 from typing import Dict, List, Union, Tuple, Any
 from os import path
@@ -17,8 +18,8 @@ def xlsx_to_csv(filename: str) -> None:
         filename = filename + ".xlsx"
     if not path.isfile(filename):
         print("Invalid file")
-        quit()
-    
+        sys.exit()
+
     data_frame = pd.DataFrame(pd.read_excel(filename))
     print(data_frame.head)
 
@@ -28,6 +29,6 @@ def xlsx_to_csv(filename: str) -> None:
 
 if __name__ == "__main__":
     
-    xlsx_file = input("Name of the excel file:  ")
+    xlsx_file = input("Name of the excel file: ")
     xlsx_to_csv(xlsx_file)
     
