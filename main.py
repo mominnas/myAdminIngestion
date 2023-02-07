@@ -5,6 +5,7 @@ from os import path
 import mysql.connector as msql
 from mysql.connector import Error
 import sqlalchemy as db
+import pymysql
 
 import cred
 
@@ -116,17 +117,29 @@ def sql_connect():
 
     try:
         conn = msql.connect(host=cred.DEFAULT_HOST, user=cred.DEFAULT_USER,
-                            password=cred.DEFAULT_PWD, port=3306, database='theparz9_thepartshopsorders')  # give ur username, password
+                            password=cred.DEFAULT_PWD, port=3306, database=cred.DATABASE_NAME)  # give ur username, password
         # db_Info = conn.get_server_info()
         # print("Connected to MySQL Server version ", db_Info)
         if conn.is_connected():
             db_Info = conn.get_server_info()
             print("Connected to MySQL Server version ", db_Info)
             cursor = conn.cursor()
-            cursor.execute("CREATE DATABASE employee")
+            cursor.execute("SELECT * FROM order_level")
             print("Database is created")
     except Error as e:
         print("Error while connecting to MySQL", e)
+
+
+
+def pysql_connect() -> None:
+    
+    # database connection
+    connection = pymysql.connect(host=cred.DEFAULT_HOST, port=8889, user=cred.DEFAULT_USER, passwd=cred.DEFAULT_PWD, database=cred.DATABASE_NAME)
+    cursor = connection.cursor()
+    # some other statements with the help of cursor
+    connection.close()
+
+
 
 
 if __name__ == "__main__":
@@ -140,4 +153,5 @@ if __name__ == "__main__":
     order_level, order_line_items = dataframe_cleanup(data_frame)
     
     #print(order_line.head())
-    # sql_connect()
+    #sql_connect()
+    pysql_connect()
