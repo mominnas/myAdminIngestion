@@ -4,12 +4,12 @@ from typing import Dict, List, Union, Tuple, Any
 from os import path
 import mysql.connector as msql
 from mysql.connector import Error
-import sqlalchemy as db
-import pymysql
+#import sqlalchemy as db
+#import pymysql
 
 import cred
 
-xlsx_file = cred.xlsx_file
+XLSX_FILE = cred.XLSX_FILE
 
 order_level: pd.DataFrame = pd.DataFrame(None)
 order_line_items: pd.DataFrame = pd.DataFrame(None)
@@ -69,12 +69,12 @@ def xlsx_dataframe(filename: str) -> pd.DataFrame:
         sys.exit()
 
     data = pd.read_excel(filename)
-    df = pd.DataFrame(data)
+    data_frame = pd.DataFrame(data)
     # print(data_frame.head)
-    return df
+    return data_frame
 
 
-def dataframe_cleanup(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def dataframe_cleanup(data_frame: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """ Cleans up the dataframe and returns a dataframe with the required columns.
 
     Returns:
@@ -82,11 +82,11 @@ def dataframe_cleanup(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
 
     # Change column names to compatible sql names from the schema
-    df = df.rename(columns=sql_mapping)
+    data_frame = data_frame.rename(columns=sql_mapping)
 
     
     # Drop all the unnecessary columns from the dataframe for order_level
-    df1 = df[df.columns.intersection(ORDER_LEVEL_COLUMNS)]
+    df1 = data_frame[data_frame.columns.intersection(ORDER_LEVEL_COLUMNS)]
 
     columns: List = df1.columns.values.tolist()
     print(columns)
@@ -97,7 +97,7 @@ def dataframe_cleanup(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 
     # Drop all the unnecessary columns from the dataframe for order_level
-    df2 = df[df.columns.intersection(ORDER_LINE_ITEMS_COLUMNS)]
+    df2 = data_frame[data_frame.columns.intersection(ORDER_LINE_ITEMS_COLUMNS)]
 
     columns: List = df2.columns.values.tolist()
     print(columns)
@@ -113,31 +113,71 @@ def dataframe_cleanup(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
 
 
-def sql_connect():
+def msql_connect() -> Tuple[Any, Any]:
 
+
+    # conn = pymysql.connect(**kwargs)
+    # try:
+    #     yield conn
+    # finally:
+    #     conn.close()
+
+    # database connection
+    
+    connection: Any = None
+    cursor: Any = None
+    
     try:
-        conn = msql.connect(host=cred.DEFAULT_HOST, user=cred.DEFAULT_USER,
-                            password=cred.DEFAULT_PWD, port=3306, database=cred.DATABASE_NAME)  # give ur username, password
+        connection = msql.connect(host=cred.DEFAULT_HOST, user=cred.DEFAULT_USER,
+                            password=cred.DEFAULT_PWD, port=cred.DEFAULT_PORT, database=cred.DATABASE_NAME)  # give ur username, password
+        
         # db_Info = conn.get_server_info()
         # print("Connected to MySQL Server version ", db_Info)
-        if conn.is_connected():
-            db_Info = conn.get_server_info()
-            print("Connected to MySQL Server version ", db_Info)
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM order_level")
-            print("Database is created")
-    except Error as e:
-        print("Error while connecting to MySQL", e)
-
-
-
-def pysql_connect() -> None:
+        if connection.is_connected():
+            db_info = connection.get_server_info()
+            print("Connected to MySQL Server version ", db_info)
+            cursor = connection.cursor()
+            #cursor.execute("SELECT * FROM order_level")
+            #print("Database is created")
+    except Error as err:
+        print("Error while connecting to MySQL", err)
+        exit()
     
-    # database connection
-    connection = pymysql.connect(host=cred.DEFAULT_HOST, port=8889, user=cred.DEFAULT_USER, passwd=cred.DEFAULT_PWD, database=cred.DATABASE_NAME)
-    cursor = connection.cursor()
-    # some other statements with the help of cursor
-    connection.close()
+    
+    # connection = pymysql.connect(host=cred.DEFAULT_HOST, port=cred.DEFAULT_PORT, user=cred.DEFAULT_USER, passwd=cred.DEFAULT_PWD, database=cred.DATABASE_NAME)
+    # cursor = connection.cursor()
+    # # some other statements with the help of cursor
+    # connection.close()
+    return (connection, cursor)
+
+
+
+
+
+def execute_queries(connection: Any, cursor: Any, query: str):
+    
+     if connection.is_connected():
+            db_info = connection.get_server_info()
+            print("Connected to MySQL Server version ", db_info)
+            cursor.execute(query)
+            #print("Database is created")
+
+
+
+
+def query_table(cursor: Any):
+    """ Query the table to see if the data is inserted.
+
+    Args:
+        cursor (Any): cursor to the connection
+    """
+    # Execute query
+    sql = "SELECT * FROM OrderLevel"
+    cursor.execute(sql)
+    # Fetch all the records
+    result = cursor.fetchall()
+    for i in result:
+        print(i)
 
 
 
@@ -146,12 +186,21 @@ if __name__ == "__main__":
 
     # xlsx_file = input("Name of the excel file: ")
 
-    assert path.isfile(xlsx_file) is True
+    assert path.isfile(XLSX_FILE) is True
 
-    data_frame: pd.DataFrame = xlsx_dataframe(xlsx_file)
+    xlsx_data_frame: pd.DataFrame = xlsx_dataframe(XLSX_FILE)
     
-    order_level, order_line_items = dataframe_cleanup(data_frame)
+    order_level, order_line_items = dataframe_cleanup(xlsx_data_frame)
     
     #print(order_line.head())
     #sql_connect()
-    pysql_connect()
+    msql_connection, msql_cursor = msql_connect()
+    
+    
+    execute_queries(msql_connection, msql_cursor, "DROP TABLE IF EXISTS OrderLevel;")
+    
+    execute_queries(msql_connection, msql_cursor, "CREATE TABLE OrderLevel (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), salary INT, department VARCHAR(255), position VARCHAR(255), hireDate DATE);")
+    
+    
+    query_table(msql_cursor)
+
