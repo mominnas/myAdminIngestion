@@ -4,6 +4,7 @@ from typing import Dict, List, Union, Tuple, Any
 from os import path
 import mysql.connector as msql
 from mysql.connector import Error
+from sqlalchemy import create_engine, Engine, text
 #import sqlalchemy as db
 #import pymysql
 
@@ -13,7 +14,6 @@ XLSX_FILE = cred.XLSX_FILE
 
 order_level: pd.DataFrame = pd.DataFrame(None)
 order_line_items: pd.DataFrame = pd.DataFrame(None)
-
 
 ORDER_LEVEL_COLUMNS = ['order_reference', 'first_name', 'last_name', 'company', 'address1',
                        'address2', 'city', 'province_state', 'postal_zip', 'country',
@@ -111,11 +111,12 @@ def dataframe_cleanup(data_frame: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFr
 
 
 
-
-
 def msql_connect() -> Tuple[Any, Any]:
+    """Connects to the database and returns the connection and cursor.
 
-
+    Returns:
+        Tuple[Any, Any]: Connection and cursor to the database
+    """
     # conn = pymysql.connect(**kwargs)
     # try:
     #     yield conn
@@ -130,24 +131,14 @@ def msql_connect() -> Tuple[Any, Any]:
     try:
         connection = msql.connect(host=cred.DEFAULT_HOST, user=cred.DEFAULT_USER,
                             password=cred.DEFAULT_PWD, port=cred.DEFAULT_PORT, database=cred.DATABASE_NAME)  # give ur username, password
-        
-        # db_Info = conn.get_server_info()
-        # print("Connected to MySQL Server version ", db_Info)
         if connection.is_connected():
             db_info = connection.get_server_info()
             print("Connected to MySQL Server version ", db_info)
             cursor = connection.cursor()
-            #cursor.execute("SELECT * FROM order_level")
-            #print("Database is created")
     except Error as err:
         print("Error while connecting to MySQL", err)
         exit()
     
-    
-    # connection = pymysql.connect(host=cred.DEFAULT_HOST, port=cred.DEFAULT_PORT, user=cred.DEFAULT_USER, passwd=cred.DEFAULT_PWD, database=cred.DATABASE_NAME)
-    # cursor = connection.cursor()
-    # # some other statements with the help of cursor
-    # connection.close()
     return (connection, cursor)
 
 
@@ -155,30 +146,63 @@ def msql_connect() -> Tuple[Any, Any]:
 
 
 def execute_queries(connection: Any, cursor: Any, query: str):
-    
-     if connection.is_connected():
+    """ Executes the query on the database and prints the result.
+
+    Args:
+        connection (Any): Connection to the database
+        cursor (Any): Cursor to the connection
+        query (str): Query to be executed
+    """
+    if connection.is_connected():
             db_info = connection.get_server_info()
             print("Connected to MySQL Server version ", db_info)
             cursor.execute(query)
-            #print("Database is created")
+        
+
+
+def create_sql_engine() -> Engine:
+    """Creates a sql engine to connect to the database.
+
+    Returns:
+        Engine: Engine to connect to the database
+    """
+    creds = {
+        'usr': cred.DEFAULT_USER,
+        'pwd': cred.DEFAULT_PWD,
+        'hst': cred.DEFAULT_HOST,
+        'prt': cred.DEFAULT_PORT,
+        'dbn': cred.DATABASE_NAME
+    }
+    connstr = 'mysql+mysqlconnector://{usr}:{pwd}@{hst}:{prt}/{dbn}'
+    engine = create_engine(connstr.format(**creds))
+    return engine
 
 
 
-
-def query_table(cursor: Any):
-    """ Query the table to see if the data is inserted.
-
+def insert_databases(order_level: pd.DataFrame, order_line_items: pd.DataFrame, sql_engine: Engine) -> None:
+    """ Inserts the data into the database.
     Args:
-        cursor (Any): cursor to the connection
+        order_level (pd.DataFrame): Dataframe with the order_level data
+        order_line_items (pd.DataFrame): Dataframe with the order_line_items data
+    """
+    order_level.to_sql(name='order_level', con=sql_engine, if_exists='append', index=False)
+    order_line_items.to_sql(name='order_line_items', con=sql_engine, if_exists='append', index=False)
+
+
+
+
+def query_table(engine: Engine) -> None:
+    """ Queries the table and prints the result.
+    
+    Args:
+        engine (Engine): Engine to connect to the database
     """
     # Execute query
-    sql = "SELECT * FROM OrderLevel"
-    cursor.execute(sql)
-    # Fetch all the records
-    result = cursor.fetchall()
-    for i in result:
-        print(i)
-
+    with engine.connect() as connection:
+        result = connection.execute(text("SELECT COUNT(*) as count_orders FROM order_level;"))
+        print("Count of the rows of order_level now: "+ str(result.fetchall()))
+        result = connection.execute(text("SELECT COUNT(*) as count_orders FROM order_line_items;"))
+        print("Count of the rows of order_level now: "+ str(result.fetchall()))
 
 
 
@@ -192,15 +216,7 @@ if __name__ == "__main__":
     
     order_level, order_line_items = dataframe_cleanup(xlsx_data_frame)
     
-    #print(order_line.head())
-    #sql_connect()
-    msql_connection, msql_cursor = msql_connect()
-    
-    
-    execute_queries(msql_connection, msql_cursor, "DROP TABLE IF EXISTS OrderLevel;")
-    
-    execute_queries(msql_connection, msql_cursor, "CREATE TABLE OrderLevel (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), salary INT, department VARCHAR(255), position VARCHAR(255), hireDate DATE);")
-    
-    
-    query_table(msql_cursor)
+    sql_eng = create_sql_engine()
+    insert_databases(order_level, order_line_items, sql_eng)
+    query_table(sql_eng)
 
