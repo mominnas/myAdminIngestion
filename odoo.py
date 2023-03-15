@@ -178,7 +178,6 @@ def create_sql_engine() -> Engine:
     return engine
 
 
-
 def insert_databases(order_level: pd.DataFrame, order_line_items: pd.DataFrame, sql_engine: Engine) -> None:
     """ Inserts the data into the database.
     Args:
@@ -209,14 +208,16 @@ def query_table(engine: Engine) -> None:
 if __name__ == "__main__":
 
     # xlsx_file = input("Name of the excel file: ")
-
+    # Check if the file exists
     assert path.isfile(XLSX_FILE) is True
-
+    # Convert the excel file to a csv file
     xlsx_data_frame: pd.DataFrame = xlsx_dataframe(XLSX_FILE)
-    
-    order_level, order_line_items = dataframe_cleanup(xlsx_data_frame)
-    
+    # Clean up the dataframe and return the required columns
+    ordr_level, ordr_line_items = dataframe_cleanup(xlsx_data_frame)
+    # Connect to the database
     sql_eng = create_sql_engine()
+    # Insert the data into the database
     insert_databases(order_level, order_line_items, sql_eng)
+    # Query the table to see the resulting number of rows
     query_table(sql_eng)
 
