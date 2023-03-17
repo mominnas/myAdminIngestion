@@ -1,10 +1,22 @@
 """Keystone API client. This is a simple wrapper around the Keystone API."""
+import os
+from datetime import datetime
+from typing import List, Dict, Union, Tuple, Optional
+import csv
 from zeep import Client
 import cred
+
 
 WSDL: str = cred.WSDL
 KEY: str = cred.KEY
 
+# Price cutoff for the queue.
+PRICE_CUTOFF: int = 1000
+
+ACC_NUM: str = cred.ACC_NUM
+
+
+CONFIRMATION_FILE: str = "confirmation_"
 
 """
 Input Value Description:
@@ -106,6 +118,30 @@ def drop_ship_multiple_parts(
 
 
 
+
+def utility_report_approved_methods(key: str = KEY, account_num: str = ACC_NUM) -> str:
+    """Return a list of methods that are available for the user from the API.
+    
+    On success, the returned string will contain a comma delimited list containing the 
+    name of each function available to us.
+    Args:
+        key (str): The hexadecimal web service security key.
+        account_num (str):  Either the full 13 digit account with the sub-account, 
+                            or just the shortened 5 digit main account number.
+    Returns:
+        str: A list of methods that are available for the user.
+    Error Codes:
+    The following error codes may be return when calling:
+        IllegalUseOfService
+        UnauthorizedFunctionCall
+        UnknownError
+    """
+    return str("")
+
+
+
+
+
 def get_client(wsdl: str=WSDL) -> Client:
     """Create a SOAP client.
     
@@ -122,4 +158,30 @@ def get_client(wsdl: str=WSDL) -> Client:
 
 
 
+def summary_line_item_confirmation(summary_data: Dict) -> None:
+    """Create a summary for the API calls and product-specific line item confirmation.
 
+    Saves the summary to a CSV file.
+    Args:
+        summary_data (Dict): The summary data.
+    """
+    print("----Summary and Product-Specific Line Item Confirmation----")
+
+    # Create a file name for the confirmation data
+    curr_time = datetime.now()
+    file_name = CONFIRMATION_FILE + curr_time.strftime("%Y%m%d_%H%M%S") + ".csv"
+    print("Saving confirmation to file: " + file_name)
+    if os.path.exists(file_name):
+        os.remove(file_name)
+    # TODO: FINISH THIS
+    header = ['']
+    with open(file_name, "w+", encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+        for key, value in summary_data.items():
+            writer.writerow([key, value])
+
+
+
+if __name__ == "__main__":
+    get_client()
