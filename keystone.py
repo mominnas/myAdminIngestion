@@ -4,9 +4,12 @@ from datetime import datetime
 from typing import List, Dict, Union, Tuple, Optional
 import csv
 from zeep import Client
+from requests import Session
+from zeep.transports import Transport
 import cred
 
 
+METHOD_URL: str = cred.METHOD_URL
 WSDL: str = cred.WSDL
 KEY: str = cred.KEY
 
@@ -15,6 +18,7 @@ PRICE_CUTOFF: int = 1000
 
 ACC_NUM: str = cred.ACC_NUM
 
+SERVICE_URL: str = cred.SERVICE_URL
 
 CONFIRMATION_FILE: str = "confirmation_"
 
@@ -136,7 +140,11 @@ def utility_report_approved_methods(key: str = KEY, account_num: str = ACC_NUM) 
         UnauthorizedFunctionCall
         UnknownError
     """
+    
     return str("")
+
+
+
 
 
 
@@ -155,6 +163,21 @@ def get_client(wsdl: str=WSDL) -> Client:
     name = result["Username"]
     print(name)
     return client
+
+
+
+
+
+def test_respone() -> None:
+    """Test the response from the API.
+    
+    This is a test function to test the response from the API.
+    """
+    print("----Test Response----")
+    client = get_client()
+    method_url: str = METHOD_URL + "GetClient"
+    print("Method URL: " + method_url)
+
 
 
 
