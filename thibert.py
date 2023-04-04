@@ -3,6 +3,9 @@ import json
 import requests
 from typing import Dict, List, Union, Tuple, Optional
 from tapi_client import Client, AuthenticatedClient
+import tapi_client.models
+import tapi_client.api
+from tapi_client.types import Response
 import cred
 
 
@@ -39,6 +42,7 @@ def get_api_paths(response_info: Dict[str, Union[str, Dict]]) -> None:
         return None
     for key in response_info['paths']:
         print(key)
+        break
 
 
     return None
@@ -54,11 +58,11 @@ def generate_client(key: str=TAPI_KEY) -> Client:
     client: Client = AuthenticatedClient(base_url=BASE_URL, token=key,
                                          timeout=50, verify_ssl=False,
                                          raise_on_unexpected_status=True)
-
     return client
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     r_info: Dict[str, Union[str, Dict]] = get_json()
     get_api_paths(r_info)
     api_client = generate_client()
+    print(api_client.get_headers())

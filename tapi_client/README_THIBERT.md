@@ -4,18 +4,12 @@ A client library for accessing TAPI
 ## Usage
 First, create a client:
 
-```python
-from tapi_client import Client
-
-client = Client(base_url="https://api.example.com")
-```
-
-If the endpoints you're going to hit require authentication, use `AuthenticatedClient` instead:
+Endpoint we will hit require authentication, use `AuthenticatedClient` instead:
 
 ```python
 from tapi_client import AuthenticatedClient
 
-client = AuthenticatedClient(base_url="https://api.example.com", token="SuperSecretToken")
+client = AuthenticatedClient(base_url="ENDPOINT URL", token="SecretToken")
 ```
 
 Now call your endpoint and use your models:

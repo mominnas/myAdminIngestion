@@ -11,7 +11,7 @@ import cred
 
 METHOD_URL: str = cred.METHOD_URL
 WSDL: str = cred.WSDL
-KEY: str = cred.KEY
+TEST_KEY: str = cred.TEST_KEY
 
 # Price cutoff for the queue.
 PRICE_CUTOFF: int = 1000
@@ -123,7 +123,7 @@ def drop_ship_multiple_parts(
 
 
 
-def utility_report_approved_methods(key: str = KEY, account_num: str = ACC_NUM) -> str:
+def utility_report_approved_methods(key: str = TEST_KEY, account_num: str = ACC_NUM) -> str:
     """Return a list of methods that are available for the user from the API.
     
     On success, the returned string will contain a comma delimited list containing the 
