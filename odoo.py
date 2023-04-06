@@ -1,19 +1,22 @@
 import sys
 import pandas as pd
 from typing import Dict, List, Union, Tuple, Any
-from os import path
-import mysql.connector as msql
+from os import path, stat
+import mysql.connector
 from mysql.connector import Error
 from sqlalchemy import create_engine, Engine, text
+from datetime import datetime
+import time
+import platform
 #import sqlalchemy as db
-#import pymysql
+import pymysql
 
 import cred
 
 XLSX_FILE = cred.XLSX_FILE
-
-order_level: pd.DataFrame = pd.DataFrame(None)
-order_line_items: pd.DataFrame = pd.DataFrame(None)
+LOG_FILE = 'log.dat'
+# order_level: pd.DataFrame = pd.DataFrame(None)
+# order_line_items: pd.DataFrame = pd.DataFrame(None)
 
 ORDER_LEVEL_COLUMNS = [
     'order_reference', 'first_name', 'last_name', 'company', 'address1',
@@ -105,7 +108,6 @@ def dataframe_cleanup(
     if (not all(columns)):
         print("Columns are not correct")
         sys.exit()
-
     return df1, df2
 
 
@@ -127,7 +129,7 @@ def msql_connect() -> Tuple[Any, Any]:
     cursor: Any = None
 
     try:
-        connection = msql.connect(
+        connection = mysql.connector.connect(
             host=cred.DEFAULT_HOST,
             user=cred.DEFAULT_USER,
             password=cred.DEFAULT_PWD,
@@ -172,6 +174,7 @@ def create_sql_engine() -> Engine:
         'dbn': cred.DATABASE_NAME
     }
     connstr = 'mysql+mysqlconnector://{usr}:{pwd}@{hst}:{prt}/{dbn}'
+    # connstr = 'mysql+pymysql://{usr}:{pwd}@{hst}:{prt}/{dbn}'
     engine = create_engine(connstr.format(**creds))
     return engine
 
@@ -180,19 +183,24 @@ def insert_databases(order_level: pd.DataFrame,
                      order_line_items: pd.DataFrame,
                      sql_engine: Engine) -> None:
     """Insert the data into the database.
-    
+
     Args:
         order_level (pd.DataFrame): Dataframe with the order_level data
-        order_line_items (pd.DataFrame): Dataframe with the order_line_items data
+        order_line_items (pd.DataFrame): Dataframe with order_line_items
     """
-    order_level.to_sql(name='order_level',
-                       con=sql_engine,
-                       if_exists='append',
-                       index=False)
-    order_line_items.to_sql(name='order_line_items',
-                            con=sql_engine,
-                            if_exists='append',
-                            index=False)
+    order_level_rows = order_level.to_sql(name='order_level',
+                                          con=sql_engine,
+                                          if_exists='append',
+                                          index=False)
+    print("Number of rows inserted in order_level: " + str(order_level_rows))
+
+    order_line_rows = order_line_items.to_sql(name='order_line_items',
+                                              con=sql_engine,
+                                              if_exists='append',
+                                              index=False)
+
+    print("Number of rows inserted in order_line_items: " +
+          str(order_line_rows))
 
 
 def query_table(engine: Engine) -> None:
@@ -213,18 +221,64 @@ def query_table(engine: Engine) -> None:
               str(result.fetchall()))
 
 
+def creation_date(path_to_file) -> float:
+    """Get creation date of a file.
+
+    Try to get the date that a file was created,
+    falling back to when it was last modified
+    if that isn't possible.
+    """
+    if platform.system() == 'Windows':
+        return path.getctime(path_to_file)
+    else:
+        st = stat(path_to_file)
+        try:
+            return st.st_birthtime
+        except AttributeError:
+            # We're probably on Linux. No easy way to get creation dates here,
+            # so we'll settle for when its content was last modified.
+            return st.st_mtime
+
+
+def check_time() -> bool:
+    """Check if we need to run the script again."""
+    if not path.isfile(LOG_FILE):
+        print("Log file does not exist")
+        return True
+
+    with open(LOG_FILE, "r") as f:
+        lines = f.read().splitlines()
+        last_time = lines[-1]
+        print("Last ran: " + str(last_time))
+    file_time = creation_date(XLSX_FILE)
+    if float(last_time) < file_time:
+        return True
+    return False
+
+
 if __name__ == "__main__":
+    # cnx = create_engine('mysql+pymysql://[user]:[pass]@[host]:[port]/[schema]', echo=False)
+    # data = pd.read_sql('SELECT * FROM sample_table', cnx)
+    # data.to_sql(name='sample_table2', con=cnx, if_exists = 'append', index=False)
 
     # xlsx_file = input("Name of the excel file: ")
     # Check if the file exists
     assert path.isfile(XLSX_FILE) is True
-    # Convert the excel file to a csv file
-    xlsx_data_frame: pd.DataFrame = xlsx_dataframe(XLSX_FILE)
-    # Clean up the dataframe and return the required columns
-    ordr_level, ordr_line_items = dataframe_cleanup(xlsx_data_frame)
-    # Connect to the database
-    sql_eng = create_sql_engine()
-    # Insert the data into the database
-    insert_databases(order_level, order_line_items, sql_eng)
     # Query the table to see the resulting number of rows
-    query_table(sql_eng)
+    # query_table(sql_eng)
+    if check_time():
+        print("Running the script again...")
+        # Convert the excel file to a csv file
+        xlsx_data_frame: pd.DataFrame = xlsx_dataframe(XLSX_FILE)
+        # Clean up the dataframe and return the required columns
+        order_level, order_line_items = dataframe_cleanup(xlsx_data_frame)
+        # Connect to the database
+        sql_eng = create_sql_engine()
+        # Insert the data into the database
+        insert_databases(order_level, order_line_items, sql_eng)
+
+        with open(LOG_FILE, 'a+') as f:
+            f.write(str(time.mktime(datetime.now().timetuple())))
+            f.write('\n')
+    else:
+        print("No need to run the script again")
